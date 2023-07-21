@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Debug",
+            "type": "shell",
+            "command": "g++ -c src/**.cpp -std=c++14 -g -Wall -m64 -Ofast -I include/**; G++ *.o -o bin/debug/main; ./bin/debug/main",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            }
+        },
+        {
+            "label": "Build Release",
+            "type": "shell",
+            "command": "g++ -c src/**.cpp -std=c++14 -O3 -Wall -m64 -I include; G++ *.o -o bin/release/main -s; ./bin/release/main",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            }
+        },
+    ]
+}
