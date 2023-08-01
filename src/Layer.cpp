@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <string>
 
 #include "ActivationFn.hpp"
 #include "Layer.hpp"
@@ -8,6 +9,12 @@
 
 namespace NeuralNetwork
 {
+    Layer::Layer(unsigned int p_count)
+        : activationFn(nullptr)
+    {
+        neurons = std::vector<Neuron>(p_count, Neuron(0));
+    }
+
     Layer::Layer(unsigned int p_count, ActivationFn::ActivationFn *p_fn)
         : activationFn(p_fn)
     {
@@ -18,9 +25,9 @@ namespace NeuralNetwork
     {
         connectionCount = count;
 
-        for (auto n : neurons) {
+        for (auto &n : neurons) {
             n.weights = std::vector<float>(count, 0);
-            n.bias = 0;
+            n.bias = 0;     
         }
     }
 
@@ -32,7 +39,7 @@ namespace NeuralNetwork
             weights.push_back(neuron.weights);
         }
 
-        return weights;
+        return Math::Matrix(weights);
     }
 
     std::vector<float> Layer::BiasVector()
@@ -75,13 +82,13 @@ namespace NeuralNetwork
         return OutputVector();
     }
 
-    void Layer::AdjustNeurons(std::vector<std::vector<float>> weightShiftVector, std::vector<float> biasShiftVector)
+    void Layer::AdjustNeurons(std::vector<std::vector<float>> weightShiftVector, std::vector<float> biasShiftVector, float mult = 1)
     {
         if (neurons.size() != weightShiftVector.size() || neurons.size() != biasShiftVector.size())
             throw std::invalid_argument("number of adjustments do not match number of neurons");
 
         for (unsigned int i = 0; i < neurons.size(); i++) {
-            neurons[i].Adjust(weightShiftVector[i], biasShiftVector[i]);
+            neurons[i].Adjust(weightShiftVector[i], biasShiftVector[i], mult);
         }
     }
 }

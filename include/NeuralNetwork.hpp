@@ -1,5 +1,6 @@
 #pragma once
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "CostFn.hpp"
@@ -8,6 +9,9 @@
 
 namespace NeuralNetwork
 {
+    using LinearParams = std::pair<std::vector<std::vector<float>>, std::vector<float>>;
+    using TrainTestPartition = std::pair<std::vector<Data>, std::vector<Data>>;
+
     class MultilayerPerceptron
     {
     public:
@@ -24,8 +28,11 @@ namespace NeuralNetwork
         CostFn::CostFn* costFn;
 
         void LoadDataInstance(Data input);
+        TrainTestPartition PartitionData(std::vector<Data> data, float trainingDataRatio);
+        std::tuple<float> TestData(std::vector<Data> data);
+
         void RunModel();
-        std::tuple<std::vector<Math::Matrix>, std::vector<float>> GradientDescent(std::vector<Data> batch);
-        std::tuple<std::vector<Math::Matrix>, std::vector<float>> Backpropagate();
+        LinearParams GradientDescent(std::vector<Data> batch, float learningRate);
+        LinearParams Backpropagate(LinearParams changes);
     };
 }

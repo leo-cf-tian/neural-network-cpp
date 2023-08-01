@@ -15,6 +15,7 @@ namespace NeuralNetwork
         ActivationFn::ActivationFn* activationFn;
 
         Layer();
+        Layer(unsigned int count);
         Layer(unsigned int count, ActivationFn::ActivationFn* fn);
 
         void InitializeConnections(unsigned int count);
@@ -23,6 +24,6 @@ namespace NeuralNetwork
         std::vector<float> BiasVector();
         std::vector<float> OutputVector();
         std::vector<float> CalculateValues(std::vector<float> input);
-        void AdjustNeurons(std::vector<std::vector<float>> weightShiftVector, std::vector<float> biasShiftVector);
+        void AdjustNeurons(std::vector<std::vector<float>> weightShiftVector, std::vector<float> biasShiftVector, float mult);
     };
 }

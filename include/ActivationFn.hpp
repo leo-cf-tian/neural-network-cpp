@@ -13,21 +13,28 @@ namespace ActivationFn
         std::vector<float> dx(std::vector<float> vecX);
     };
 
-    class ReLU : ActivationFn
+    class ReLU : public ActivationFn
     {
     public:
         float fn(float x) override;
         float dx(float x) override;
     };
 
-    class Tanh : ActivationFn
+    class Tanh : public ActivationFn
     {
     public:
         float fn(float x) override;
         float dx(float x) override;
     };
 
-    class LogisticSigmoid : ActivationFn
+    class LogisticSigmoid : public ActivationFn
+    {
+    public:
+        float fn(float x) override;
+        float dx(float x) override;
+    };
+
+    class Linear : public ActivationFn
     {
     public:
         float fn(float x) override;

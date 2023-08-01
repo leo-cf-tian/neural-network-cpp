@@ -53,6 +53,19 @@ namespace ActivationFn
 
     float LogisticSigmoid::dx(float x)
     {
+        if (x > 5 || x < -5)
+            return 0;
+
         return 1 / (exp(x) + 2 + exp(-x));
     }; 
+
+    float Linear::fn(float x)
+    {
+        return x;
+    };
+
+    float Linear::dx(float x)
+    {
+        return 1;
+    };
 }

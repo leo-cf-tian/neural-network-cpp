@@ -10,6 +10,6 @@ namespace NeuralNetwork {
 
         Neuron(unsigned int connectionCount);
         
-        void Adjust(std::vector<float> weightShift, float biasShift);
+        void Adjust(std::vector<float> weightShift, float biasShift, float mult);
     };
 }

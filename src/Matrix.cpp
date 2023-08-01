@@ -1,6 +1,9 @@
 #include <cmath>
 #include <iostream>
 #include <vector>
+#include <random>
+#include <chrono>
+
 #include "Matrix.hpp"
 
 namespace Math
@@ -79,6 +82,23 @@ namespace Math
         return Matrix(p_values.size(), 1, p_values);
     }
 
+    Matrix Matrix::RandomMatrix(unsigned int rows, unsigned int cols)
+    {
+        srand(std::chrono::system_clock::now().time_since_epoch().count());
+
+        std::vector<std::vector<float>> values = std::vector<std::vector<float>>(rows, std::vector<float>(cols, 0));
+
+        for (unsigned int i = 0; i < rows; i++) {
+            for (unsigned int j = 0; j < cols; j++) {
+                values[i][j] = rand() / static_cast<float>(RAND_MAX) * 200 - 100;
+            }
+        }
+
+        Math::Matrix result(values);
+
+        return result;
+    }
+
     Matrix operator+(Matrix const &m1, Matrix const &m2)
     {
         if (m1.rows != m2.rows || m1.cols != m2.cols)
@@ -148,6 +168,10 @@ namespace Math
         return *this;
     };
 
+    Matrix Matrix::operator-()
+    {
+        return Matrix(rows, cols, values) * -1.0f;
+    };
 
     Matrix operator*(const float &num, Matrix const &matrix)
     {
@@ -156,6 +180,19 @@ namespace Math
         for (unsigned int i = 0; i < matrix.rows; i++) {
             for (unsigned int j = 0; j < matrix.cols; j++) {
                 result.values[i * matrix.cols + j] = matrix.values[i * matrix.cols + j] * num;
+            }
+        }
+
+        return result;
+    };
+
+    Matrix Matrix::operator*(const float &num) const
+    {
+        Matrix result(rows, cols);
+
+        for (unsigned int i = 0; i < rows; i++) {
+            for (unsigned int j = 0; j < cols; j++) {
+                result.values[i * cols + j] = values[i * cols + j] * num;
             }
         }
 
@@ -241,7 +278,7 @@ namespace Math
 
     Matrix::operator std::vector<float>() const
     {
-        if (rows != 1 || cols != 1)
+        if (rows != 1 && cols != 1)
             throw std::invalid_argument("only column or row matrices can be cast to vectors");
 
         return values;

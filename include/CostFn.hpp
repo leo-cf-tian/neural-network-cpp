@@ -9,7 +9,7 @@ namespace CostFn
         virtual float dx(float target, float value);
     };
 
-    class L2 : CostFn
+    class L2 : public CostFn
     {
     public:
         float fn(float target, float value) override;

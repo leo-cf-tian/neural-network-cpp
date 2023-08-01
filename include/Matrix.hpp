@@ -18,14 +18,17 @@ namespace Math
         Matrix(unsigned int p_rows, unsigned int p_cols, std::vector<float> values);
 
         static Matrix ColumnMatrix(std::vector<float> values);
+        static Matrix RandomMatrix(unsigned int rows, unsigned int cols);
 
         friend Matrix operator+(Matrix const &m1, Matrix const &m2);
         Matrix operator+(std::vector<float> const &vector) const;
         Matrix &operator+=(Matrix const &matrix);
         Matrix operator-(Matrix const &matrix) const;
         Matrix &operator-=(Matrix const &matrix);
+        Matrix operator-();
 
         friend Matrix operator*(const float &num, Matrix const &matrix);
+        Matrix operator*(const float &num) const;
         Matrix &operator*=(const float &num);
         Matrix operator/(const float &num) const;
         Matrix &operator/=(const float &num);
