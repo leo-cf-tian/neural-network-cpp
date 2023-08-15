@@ -4,9 +4,9 @@
 
 namespace ActivationFn
 {
-    std::vector<float> ActivationFn::fn(std::vector<float> vecX)
+    std::vector<double> ActivationFn::fn(std::vector<double> vecX)
     {
-        std::vector<float> result = std::vector<float>(vecX.size(), 0);
+        std::vector<double> result = std::vector<double>(vecX.size(), 0);
 
         for (unsigned int i = 0; i < vecX.size(); i++) {
             result[i] = fn(vecX[i]);
@@ -15,9 +15,9 @@ namespace ActivationFn
         return result;
     }
 
-    std::vector<float> ActivationFn::dx(std::vector<float> vecX)
+    std::vector<double> ActivationFn::dx(std::vector<double> vecX)
     {
-        std::vector<float> result = std::vector<float>(vecX.size(), 0);
+        std::vector<double> result = std::vector<double>(vecX.size(), 0);
 
         for (unsigned int i = 0; i < vecX.size(); i++) {
             result[i] = dx(vecX[i]);
@@ -26,32 +26,42 @@ namespace ActivationFn
         return result;
     }
 
-    float ReLU::fn(float x)
+    double ReLU::fn(double x)
     {
         return x > 0 ? x : 0;
     };
 
-    float ReLU::dx(float x)
+    double ReLU::dx(double x)
     {
         return x > 0 ? 1 : 0;
     };
 
-    float Tanh::fn(float x)
+    double LeakyReLU::fn(double x)
+    {
+        return x > 0 ? x : x * 0.1;
+    };
+
+    double LeakyReLU::dx(double x)
+    {
+        return x > 0 ? 1 : 0.1;
+    };
+
+    double Tanh::fn(double x)
     {
         return tanh(x);
     };
 
-    float Tanh::dx(float x)
+    double Tanh::dx(double x)
     {
         return 1 / cosh(x) / cosh(x);
     };
 
-    float LogisticSigmoid::fn(float x)
+    double LogisticSigmoid::fn(double x)
     {
         return 1 / (1 + exp(-x));
     };
 
-    float LogisticSigmoid::dx(float x)
+    double LogisticSigmoid::dx(double x)
     {
         if (x > 5 || x < -5)
             return 0;
@@ -59,12 +69,12 @@ namespace ActivationFn
         return 1 / (exp(x) + 2 + exp(-x));
     }; 
 
-    float Linear::fn(float x)
+    double Linear::fn(double x)
     {
         return x;
     };
 
-    float Linear::dx(float x)
+    double Linear::dx(double x)
     {
         return 1;
     };

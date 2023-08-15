@@ -3,8 +3,8 @@
 
 struct Data
 {
-    Data(std::vector<float> parameters, int label);
+    Data(std::vector<double> parameters, int label);
 
-    std::vector<float> parameters;
+    std::vector<double> parameters;
     int label;
 };

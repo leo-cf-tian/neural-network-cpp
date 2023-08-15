@@ -6,11 +6,12 @@
 #include "CostFn.hpp"
 #include "Data.hpp"
 #include "Layer.hpp"
+#include "Matrix.hpp"
 
 namespace NeuralNetwork
 {
-    using LinearParams = std::pair<std::vector<std::vector<float>>, std::vector<float>>;
-    using TrainTestPartition = std::pair<std::vector<Data>, std::vector<Data>>;
+    using LinearParams = std::tuple<std::vector<Math::Matrix>, std::vector<double>, std::vector<double>>;
+    using TrainTestPartition = std::pair<std::vector<std::vector<Data>>, std::vector<Data>>;
 
     class MultilayerPerceptron
     {
@@ -21,18 +22,18 @@ namespace NeuralNetwork
         void AddLayer(Layer layer);
         void SetCostFunction(CostFn::CostFn* costFn);
         
-        void Train(std::vector<Data> data, int epochs);
+        void Train(std::vector<Data> data, int epochs = 20, double learningRate = 0.01, int batchSize = 50);
         
     private:
         std::vector<Layer> layers;
         CostFn::CostFn* costFn;
 
         void LoadDataInstance(Data input);
-        TrainTestPartition PartitionData(std::vector<Data> data, float trainingDataRatio);
-        std::tuple<float> TestData(std::vector<Data> data);
+        TrainTestPartition PartitionData(std::vector<Data> data, double trainingDataRatio = 0.9, int batchSize = 0);
+        std::tuple<double, double> TestData(std::vector<Data> data);
 
         void RunModel();
-        LinearParams GradientDescent(std::vector<Data> batch, float learningRate);
-        LinearParams Backpropagate(LinearParams changes);
+        LinearParams GradientDescent(std::vector<Data> batch, double learningRate);
+        LinearParams Backpropagate(LinearParams changes, std::size_t layerIndex);
     };
 }

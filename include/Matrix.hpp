@@ -6,46 +6,44 @@ namespace Math
 {
     struct Matrix
     {
-        using matrix = std::vector<std::vector<float>>;
+        using matrix = std::vector<std::vector<double>>;
 
     public:
-        unsigned int rows;
-        unsigned int cols;
-        
-        Matrix(unsigned int p_rows, unsigned int cols);
-        Matrix(unsigned int p_rows, unsigned int cols, matrix values);
+        Matrix(std::size_t p_rows, std::size_t cols);
+        Matrix(std::size_t p_rows, std::size_t cols, matrix values);
         Matrix(matrix values);
-        Matrix(unsigned int p_rows, unsigned int p_cols, std::vector<float> values);
+        Matrix(std::size_t p_rows, std::size_t p_cols, std::vector<double> values);
 
-        static Matrix ColumnMatrix(std::vector<float> values);
-        static Matrix RandomMatrix(unsigned int rows, unsigned int cols);
+        static Matrix RandomMatrix(std::size_t rows, std::size_t cols);
 
         friend Matrix operator+(Matrix const &m1, Matrix const &m2);
-        Matrix operator+(std::vector<float> const &vector) const;
+        Matrix operator+(std::vector<double> const &vector) const;
         Matrix &operator+=(Matrix const &matrix);
         Matrix operator-(Matrix const &matrix) const;
         Matrix &operator-=(Matrix const &matrix);
         Matrix operator-();
 
-        friend Matrix operator*(const float &num, Matrix const &matrix);
-        Matrix operator*(const float &num) const;
-        Matrix &operator*=(const float &num);
-        Matrix operator/(const float &num) const;
-        Matrix &operator/=(const float &num);
+        friend Matrix operator*(const double &num, Matrix const &matrix);
+        Matrix operator*(const double &num) const;
+        Matrix &operator*=(const double &num);
+        Matrix operator/(const double &num) const;
+        Matrix &operator/=(const double &num);
 
-        Matrix operator*(std::vector<float> const &vector) const;
+        Matrix operator*(std::vector<double> const &vector) const;
         Matrix operator*(Matrix const &matrix) const;
 
-        std::vector<float> operator[](unsigned int i) const;
+        std::vector<double> operator[](std::size_t i) const;
 
-        operator std::vector<float>() const;
+        operator std::vector<double>() const;
 
-    private:
-        std::vector<float> values;
+    protected:
+        std::vector<double> values;
+        std::size_t rows;
+        std::size_t cols;
     };
 
     Matrix operator+(Matrix const &m1, Matrix const &m2);
-    Matrix operator*(const float &num, Matrix const &matrix);
+    Matrix operator*(const double &num, Matrix const &matrix);
 }
 
 

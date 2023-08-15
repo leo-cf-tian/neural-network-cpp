@@ -4,12 +4,12 @@
 
 namespace CostFn
 {
-    float L2::fn(float target, float value)
+    double L2::fn(double target, double value)
     {
         return (value - target) * (value - target);
     };
 
-    float L2::dx(float target, float value)
+    double L2::dx(double target, double value)
     {
         return 2 * (value - target);
     };

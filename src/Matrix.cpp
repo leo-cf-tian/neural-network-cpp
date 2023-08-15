@@ -8,16 +8,16 @@
 
 namespace Math
 {
-    Matrix::Matrix(unsigned int p_rows, unsigned int p_cols)
+    Matrix::Matrix(std::size_t p_rows, std::size_t p_cols)
         : rows(p_rows), cols(p_cols)
     {
         if (rows < 1 || cols < 1) 
             throw std::invalid_argument("matrix dimensions must be positive");
 
-        values = std::vector<float>(rows * cols, 0);
+        values = std::vector<double>(rows * cols, 0);
     };
 
-    Matrix::Matrix(unsigned int p_rows, unsigned int p_cols, matrix p_values)
+    Matrix::Matrix(std::size_t p_rows, std::size_t p_cols, matrix p_values)
         : rows(p_rows), cols(p_cols)
     {
         if (rows < 1 || cols < 1) 
@@ -32,7 +32,7 @@ namespace Math
             }
         }
         
-        values = std::vector<float>(rows * cols, 0);
+        values = std::vector<double>(rows * cols, 0);
 
         for (unsigned int i = 0; i < rows; i++) {
             for (unsigned int j = 0; j < cols; j++) {
@@ -55,7 +55,7 @@ namespace Math
             }
         }
             
-        values = std::vector<float>(rows * cols, 0);
+        values = std::vector<double>(rows * cols, 0);
 
         for (unsigned int i = 0; i < rows; i++) {
             for (unsigned int j = 0; j < cols; j++) {
@@ -64,7 +64,7 @@ namespace Math
         }
     };
 
-    Matrix::Matrix(unsigned int p_rows, unsigned int p_cols, std::vector<float> p_values)
+    Matrix::Matrix(std::size_t p_rows, std::size_t p_cols, std::vector<double> p_values)
         : rows(p_rows), cols(p_cols)
     {
         if (rows < 1 || cols < 1) 
@@ -77,20 +77,20 @@ namespace Math
     };
 
     
-    Matrix Matrix::ColumnMatrix(std::vector<float> p_values)
+    Matrix Matrix::ColumnMatrix(std::vector<double> p_values)
     {
         return Matrix(p_values.size(), 1, p_values);
     }
 
-    Matrix Matrix::RandomMatrix(unsigned int rows, unsigned int cols)
+    Matrix Matrix::RandomMatrix(std::size_t rows, std::size_t cols)
     {
         srand(std::chrono::system_clock::now().time_since_epoch().count());
 
-        std::vector<std::vector<float>> values = std::vector<std::vector<float>>(rows, std::vector<float>(cols, 0));
+        std::vector<std::vector<double>> values = std::vector<std::vector<double>>(rows, std::vector<double>(cols, 0));
 
         for (unsigned int i = 0; i < rows; i++) {
             for (unsigned int j = 0; j < cols; j++) {
-                values[i][j] = rand() / static_cast<float>(RAND_MAX) * 200 - 100;
+                values[i][j] = rand() / static_cast<double>(RAND_MAX) * 200 - 100;
             }
         }
 
@@ -113,9 +113,9 @@ namespace Math
         return result;
     };
     
-    Matrix Matrix::operator+(std::vector<float> const &vector) const
+    Matrix Matrix::operator+(std::vector<double> const &vector) const
     {
-        if (rows != 1 || cols != 1)
+        if (rows != 1 && cols != 1)
             throw std::invalid_argument("vectors can only be added to column or row matrices");
 
         if (vector.size() != rows * cols) 
@@ -173,7 +173,7 @@ namespace Math
         return Matrix(rows, cols, values) * -1.0f;
     };
 
-    Matrix operator*(const float &num, Matrix const &matrix)
+    Matrix operator*(const double &num, Matrix const &matrix)
     {
         Matrix result(matrix.rows, matrix.cols);
 
@@ -186,7 +186,7 @@ namespace Math
         return result;
     };
 
-    Matrix Matrix::operator*(const float &num) const
+    Matrix Matrix::operator*(const double &num) const
     {
         Matrix result(rows, cols);
 
@@ -199,7 +199,7 @@ namespace Math
         return result;
     };
 
-    Matrix &Matrix::operator*=(const float &num)
+    Matrix &Matrix::operator*=(const double &num)
     {
         for (unsigned int i = 0; i < rows; i++) {
             for (unsigned int j = 0; j < cols; j++) {
@@ -210,7 +210,7 @@ namespace Math
         return *this;
     };
 
-    Matrix Matrix::operator/(const float &num) const
+    Matrix Matrix::operator/(const double &num) const
     {
         Matrix result(rows, cols);
 
@@ -223,7 +223,7 @@ namespace Math
         return result;
     };
 
-    Matrix &Matrix::operator/=(const float &num)
+    Matrix &Matrix::operator/=(const double &num)
     {
         for (unsigned int i = 0; i < rows; i++) {
             for (unsigned int j = 0; j < cols; j++) {
@@ -234,7 +234,7 @@ namespace Math
         return *this;
     };
 
-    Matrix Matrix::operator*(std::vector<float> const &vector) const
+    Matrix Matrix::operator*(std::vector<double> const &vector) const
     {
         if (cols != vector.size())
             throw std::invalid_argument("matrix column count and vector length does not match");
@@ -268,15 +268,15 @@ namespace Math
         return result;
     };
 
-    std::vector<float> Matrix::operator[](unsigned int i) const
+    std::vector<double> Matrix::operator[](std::size_t i) const
     {
         if (i >= rows || i < 0)
             throw std::invalid_argument("index out of range");
 
-        return std::vector<float>(values.begin() + i * cols, values.begin() + (i + 1) * cols);
+        return std::vector<double>(values.begin() + i * cols, values.begin() + (i + 1) * cols);
     };
 
-    Matrix::operator std::vector<float>() const
+    Matrix::operator std::vector<double>() const
     {
         if (rows != 1 && cols != 1)
             throw std::invalid_argument("only column or row matrices can be cast to vectors");

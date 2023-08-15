@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cmath>
 #include <utility>
 #include <vector>
 #include <algorithm>
@@ -57,61 +58,93 @@ namespace NeuralNetwork
 
     void MultilayerPerceptron::RunModel()
     {
-        std::vector<float> output = layers[0].OutputVector();
+        std::vector<double> output = layers[0].OutputVector();
 
         for (unsigned int i = 1; i < layers.size(); i++) {
             output = layers[i].CalculateValues(output);
         }
     }
 
-    LinearParams MultilayerPerceptron::GradientDescent(std::vector<Data> batch, float learningRate = 0.01f)
+    LinearParams MultilayerPerceptron::GradientDescent(std::vector<Data> batch, double learningRate)
     {
-        std::vector<Math::Matrix> weightDerivatives = std::vector<Math::Matrix>(layers.back().neurons.size(), Math::Matrix(layers.back().connectionCount, 1));
-        std::vector<float> biasDerivatives = std::vector<float>(layers.back().neurons.size(), 0);
-        
-        float avg = 0;
-        float bavg = 0;
+        Layer &layer = layers.back();
+
+        std::vector<Math::Matrix> weightDerivatives = std::vector<Math::Matrix>(layer.neurons.size(), Math::Matrix(layer.connectionCount, 1));
+        std::vector<double> biasDerivatives = std::vector<double>(layer.neurons.size(), 0);
+        std::vector<double> prevValueDerivatives = std::vector<double>(layer.connectionCount, 0);
 
         for (auto data : batch) {
             LoadDataInstance(data);
             RunModel();
 
-            for (unsigned int i = 0; i < layers.back().neurons.size(); i++) {
-                NeuralNetwork::Neuron neuron = layers.back().neurons[i];
-                float adjustment = layers.back().activationFn->dx(neuron.value)
-                                        * costFn->dx(data.label, layers.back().activationFn->fn(neuron.value))
+            for (unsigned int i = 0; i < layer.neurons.size(); i++) {
+                NeuralNetwork::Neuron neuron = layer.neurons[i];
+                double adjustment = layer.activationFn->dx(neuron.value)
+                                        * costFn->dx(data.label, layer.activationFn->fn(neuron.value))
                                         / batch.size();
 
                 weightDerivatives[i] += adjustment * Math::Matrix::ColumnMatrix(layers[layers.size() - 2].OutputVector());
                 biasDerivatives[i] += adjustment;
-
-                avg += adjustment * layers[layers.size() - 2].OutputVector()[0];
-                bavg += adjustment * 1;
+                for (unsigned int j = 0; j < layer.connectionCount; j++)
+                {
+                    prevValueDerivatives[j] += adjustment * layer.neurons[i].weights[j];
+                }
             }
         }
 
-        // std::cout << avg << std::endl;
-        // std::cout << bavg << std::endl;
-
-        std::vector<std::vector<float>> weightAdjustments = {};
-        std::vector<float> biasAdjustments = {};
+        std::vector<std::vector<double>> weightAdjustments = {};
+        std::vector<double> biasAdjustments = {};
 
         for (unsigned int i = 0; i < layers.back().neurons.size(); i++) {
             weightAdjustments.push_back(-weightDerivatives[i]);
             biasAdjustments.push_back(-biasDerivatives[i]);
         }
          
-        layers.back().AdjustNeurons(weightAdjustments, biasAdjustments, learningRate);
+        layer.AdjustNeurons(weightAdjustments, biasAdjustments, learningRate);
 
-        return LinearParams(weightAdjustments, biasAdjustments);
+        return LinearParams(weightDerivatives, biasDerivatives, prevValueDerivatives);
     }
 
-    // LinearParams MultilayerPerceptron::Backpropagate(LinearParams changes)
-    // {
+    LinearParams MultilayerPerceptron::Backpropagate(LinearParams changes, std::size_t layerIndex)
+    {
+        std::vector<Math::Matrix> nextWeightAdjustments = std::get<0>(changes);
+        std::vector<double> nextBiasAdjustments = std::get<1>(changes);
+        std::vector<double> valueAdjustments = std::get<2>(changes);
 
-    // }
+        Layer &layer = layers[layerIndex];
+
+        std::vector<Math::Matrix> weightDerivatives = std::vector<Math::Matrix>(layer.neurons.size(), Math::Matrix(layer.connectionCount, 1));
+        std::vector<double> biasDerivatives = std::vector<double>(layer.neurons.size(), 0);
+        std::vector<double> prevValueDerivatives = std::vector<double>(layer.connectionCount, 0);
+
+        for (unsigned int i = 0; i < layer.neurons.size(); i++) {
+            NeuralNetwork::Neuron neuron = layer.neurons[i];
+            double adjustment = layer.activationFn->dx(neuron.value)
+                                    * valueAdjustments[i];
+
+            weightDerivatives[i] += adjustment * Math::Matrix::ColumnMatrix(layers[layerIndex - 1].OutputVector());
+            biasDerivatives[i] += adjustment;
+
+            for (unsigned int j = 0; j < layer.connectionCount; j++)
+            {
+                prevValueDerivatives[j] += adjustment * layer.neurons[i].weights[j];
+            }
+        }
+        
+        std::vector<std::vector<double>> weightAdjustments = {};
+        std::vector<double> biasAdjustments = {};
+
+        for (unsigned int i = 0; i < layer.neurons.size(); i++) {
+            weightAdjustments.push_back(-weightDerivatives[i]);
+            biasAdjustments.push_back(-biasDerivatives[i]);
+        }
+        
+        layer.AdjustNeurons(weightAdjustments, biasAdjustments);
+
+        return LinearParams(weightDerivatives, biasDerivatives, prevValueDerivatives);
+    }
     
-    TrainTestPartition MultilayerPerceptron::PartitionData(std::vector<Data> data, float trainingDataRatio = 0.9f)
+    TrainTestPartition MultilayerPerceptron::PartitionData(std::vector<Data> data, double trainingDataRatio, int batchSize)
     {
         if (trainingDataRatio < 0 || trainingDataRatio > 1)
             throw std::invalid_argument("size of partition must be between 0 and 1");
@@ -119,29 +152,36 @@ namespace NeuralNetwork
         if ((int)(data.size() * trainingDataRatio) < 1 || (int)(data.size() * (1 - trainingDataRatio)) < 1)
             throw std::invalid_argument("partition must not return lists of size 0");
 
+        unsigned int bound = data.size() * trainingDataRatio;
+
+        if (batchSize == 0)
+            batchSize = bound;
+            
+        unsigned int batches = ceil((data.size() * trainingDataRatio) / (double) batchSize);
+
         std::default_random_engine rng(std::chrono::system_clock::now().time_since_epoch().count());
         std::shuffle(std::begin(data), std::end(data), rng);
 
-        unsigned int bound = data.size() * trainingDataRatio;
-        std::vector<Data> trainingSet = {};
+        std::vector<std::vector<Data>> trainingSets = std::vector<std::vector<Data>>(batches, std::vector<Data>());
         std::vector<Data> testingSet = {};
 
         for (unsigned int i = 0; i < data.size(); i++) {
             if (i < bound) {
-                trainingSet.push_back(data[i]);
+                trainingSets[i / batchSize].push_back(data[i]);
             }
             else {
                 testingSet.push_back(data[i]);
             }
         }
 
-        return TrainTestPartition(trainingSet, testingSet);
+        return TrainTestPartition(trainingSets, testingSet);
     }
     
-    std::tuple<float> MultilayerPerceptron::TestData(std::vector<Data> testingSet)
+    std::tuple<double, double> MultilayerPerceptron::TestData(std::vector<Data> testingSet)
     {
         int correct = 0;
         int incorrect = 0;
+        double cost = 0;
         for (auto data : testingSet) {
             LoadDataInstance(data);
             RunModel();
@@ -149,32 +189,40 @@ namespace NeuralNetwork
                 correct++;
             else
                 incorrect++;
+
+            cost += costFn->fn(data.label, layers.back().activationFn->fn(layers.back().neurons[0].value)) / testingSet.size();
         }
 
-        float accuracy = (float)correct / (float)(correct + incorrect);
+        double accuracy = (double)correct / (double)(correct + incorrect);
 
-        return std::tuple<float>(accuracy);
+        return std::tuple<double, double>(accuracy, cost);
     }
 
-
-    void MultilayerPerceptron::Train(std::vector<Data> data, int epochs)
+    void MultilayerPerceptron::Train(std::vector<Data> data, int epochs, double learningRate, int batchSize)
     {
         for (int epoch = 0; epoch < epochs; epoch++) {
             std::cout << "Epoch " << epoch << std::endl;
 
             TrainTestPartition partition = PartitionData(data);
 
-            std::vector<Data> trainingSet = partition.first;
+            std::vector<std::vector<Data>> trainingSets = partition.first;
             std::vector<Data> testingSet = partition.second;
 
-            GradientDescent(trainingSet, 0.001);
+            for (auto trainingSet : trainingSets) {
+                LinearParams changes = GradientDescent(trainingSet, learningRate);
 
-            std::tuple<float> results = TestData(testingSet);
-            float accuracy = std::get<0>(results);
+                for (unsigned int i = layers.size() - 2; i > 0; i--) {
+                    changes = Backpropagate(changes, i);
+                }
+            }
 
-            std::cout << layers.back().neurons[0].weights[0] << "x + " << layers.back().neurons[0].weights[1] << "y + " << layers.back().neurons[0].bias << std::endl;
+            std::tuple<double, double> results = TestData(testingSet);
+            double accuracy = std::get<0>(results);
+            double cost = std::get<1>(results);
 
             std::cout << "Accuracy: " << accuracy << std::endl;
+            std::cout << "Cost: " << cost << std::endl;
+            std::cout << std::endl;
         }
     }
 
@@ -190,8 +238,8 @@ namespace NeuralNetwork
 
     //     void LoadDataInstance(Data input);
     //     void RunModel();
-    //     std::vector<float> GradientDescent(std::vector<Data> batch);
-    //     std::vector<float> Backpropagate();
+    //     std::vector<double> GradientDescent(std::vector<Data> batch);
+    //     std::vector<double> Backpropagate();
     //     void Train(std::vector<Data> data, int epochs);
     // };
 }

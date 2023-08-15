@@ -5,14 +5,21 @@ namespace CostFn
     class CostFn
     {
     public:
-        virtual float fn(float target, float value);
-        virtual float dx(float target, float value);
+        virtual double fn(double target, double value);
+        virtual double dx(double target, double value);
     };
 
     class L2 : public CostFn
     {
     public:
-        float fn(float target, float value) override;
-        float dx(float target, float value) override;
+        double fn(double target, double value) override;
+        double dx(double target, double value) override;
+    };
+
+    class BinaryCrossEntropy : public CostFn
+    {
+    public:
+        double fn(double target, double value) override;
+        double dx(double target, double value) override;
     };
 }

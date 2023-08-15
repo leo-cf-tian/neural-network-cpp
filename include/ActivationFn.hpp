@@ -7,37 +7,44 @@ namespace ActivationFn
     class ActivationFn
     {
     public:
-        virtual float fn(float x);
-        std::vector<float> fn(std::vector<float> vecX);
-        virtual float dx(float x);
-        std::vector<float> dx(std::vector<float> vecX);
+        virtual double fn(double x);
+        std::vector<double> fn(std::vector<double> vecX);
+        virtual double dx(double x);
+        std::vector<double> dx(std::vector<double> vecX);
     };
 
     class ReLU : public ActivationFn
     {
     public:
-        float fn(float x) override;
-        float dx(float x) override;
+        double fn(double x) override;
+        double dx(double x) override;
+    };
+
+    class LeakyReLU : public ActivationFn
+    {
+    public:
+        double fn(double x) override;
+        double dx(double x) override;
     };
 
     class Tanh : public ActivationFn
     {
     public:
-        float fn(float x) override;
-        float dx(float x) override;
+        double fn(double x) override;
+        double dx(double x) override;
     };
 
     class LogisticSigmoid : public ActivationFn
     {
     public:
-        float fn(float x) override;
-        float dx(float x) override;
+        double fn(double x) override;
+        double dx(double x) override;
     };
 
     class Linear : public ActivationFn
     {
     public:
-        float fn(float x) override;
-        float dx(float x) override;
+        double fn(double x) override;
+        double dx(double x) override;
     };
 }

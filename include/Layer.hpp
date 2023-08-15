@@ -10,20 +10,20 @@ namespace NeuralNetwork
     struct Layer
     {
     public:
-        float connectionCount;
+        double connectionCount;
         std::vector<Neuron> neurons;
         ActivationFn::ActivationFn* activationFn;
 
         Layer();
-        Layer(unsigned int count);
-        Layer(unsigned int count, ActivationFn::ActivationFn* fn);
+        Layer(std::size_t count);
+        Layer(std::size_t count, ActivationFn::ActivationFn* fn);
 
-        void InitializeConnections(unsigned int count);
+        void InitializeConnections(std::size_t count);
     
         Math::Matrix WeightMatrix();
-        std::vector<float> BiasVector();
-        std::vector<float> OutputVector();
-        std::vector<float> CalculateValues(std::vector<float> input);
-        void AdjustNeurons(std::vector<std::vector<float>> weightShiftVector, std::vector<float> biasShiftVector, float mult);
+        std::vector<double> BiasVector();
+        std::vector<double> OutputVector();
+        std::vector<double> CalculateValues(std::vector<double> input);
+        void AdjustNeurons(std::vector<std::vector<double>> weightShiftVector, std::vector<double> biasShiftVector, double mult = 1);
     };
 }
