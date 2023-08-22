@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 #include <vector>
+#include <functional>
 
 namespace ActivationFn
 {
@@ -8,9 +9,9 @@ namespace ActivationFn
     {
     public:
         virtual double fn(double x);
-        std::vector<double> fn(std::vector<double> vecX);
+        std::function<double(double)> fn();
         virtual double dx(double x);
-        std::vector<double> dx(std::vector<double> vecX);
+        std::function<double(double)> dx();
     };
 
     class ReLU : public ActivationFn

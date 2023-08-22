@@ -10,8 +10,7 @@
 
 namespace NeuralNetwork
 {
-    using LinearParams = std::tuple<std::vector<Math::Matrix>, std::vector<double>, std::vector<double>>;
-    using TrainTestPartition = std::pair<std::vector<std::vector<Data>>, std::vector<Data>>;
+    using TrainTestPartition = std::pair<std::vector<Data>, std::vector<Data>>;
 
     class MultilayerPerceptron
     {
@@ -22,18 +21,23 @@ namespace NeuralNetwork
         void AddLayer(Layer layer);
         void SetCostFunction(CostFn::CostFn* costFn);
         
-        void Train(std::vector<Data> data, int epochs = 20, double learningRate = 0.01, int batchSize = 50);
+        void Train(std::vector<Data> &data, int epochs = 20, double learningRate = 0.01, int batchSize = 50);
         
     private:
         std::vector<Layer> layers;
         CostFn::CostFn* costFn;
 
-        void LoadDataInstance(Data input);
-        TrainTestPartition PartitionData(std::vector<Data> data, double trainingDataRatio = 0.9, int batchSize = 0);
-        std::tuple<double, double> TestData(std::vector<Data> data);
+        /**
+         * @brief Loads an instance of data into the first layer of the matrix
+         * @param fn fn(x, y): where x is the matrix member, and y is the argument matrix member
+         * @param argMatrix Matrix of arguments corresponding to each member
+         */
+        void LoadDataInstance(Data &input);
+        TrainTestPartition PartitionData(std::vector<Data> &data, double trainingDataRatio = 0.9, int batchSize = 0);
+        std::tuple<double, double> TestData(std::vector<Data> &data);
 
         void RunModel();
-        LinearParams GradientDescent(std::vector<Data> batch, double learningRate);
-        LinearParams Backpropagate(LinearParams changes, std::size_t layerIndex);
+        Math::Matrix GradientDescent(Data &batch, double learningRate);
+        Math::Matrix Backpropagate(Math::Matrix &changes, std::size_t layerIndex, double learningRate);
     };
 }

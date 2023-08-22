@@ -3,25 +3,21 @@
 #include <string>
 #include <random>
 #include <chrono>
+#include <functional>
 
 #include "ActivationFn.hpp"
 #include "Layer.hpp"
 #include "Matrix.hpp"
 #include "Neuron.hpp"
+#include "Vector.hpp"
 
 namespace NeuralNetwork
 {
     Layer::Layer(std::size_t p_count)
-        : activationFn(nullptr)
-    {
-        neurons = std::vector<Neuron>(p_count, Neuron(0));
-    }
+        : neuronCount(p_count), weightMatrix(Math::Matrix(p_count, 1)), biasVector(Math::Vector(p_count)), valueMatrix(Math::Matrix(p_count, 1)), activationFn(nullptr) {};
 
     Layer::Layer(std::size_t p_count, ActivationFn::ActivationFn *p_fn)
-        : activationFn(p_fn)
-    {
-        neurons = std::vector<Neuron>(p_count, Neuron(0));
-    }
+        : neuronCount(p_count), weightMatrix(Math::Matrix(p_count, 1)), biasVector(Math::Vector(p_count)), valueMatrix(Math::Matrix(p_count, 1)), activationFn(p_fn) {};
 
     void Layer::InitializeConnections(std::size_t count)
     {
@@ -29,75 +25,34 @@ namespace NeuralNetwork
 
         connectionCount = count;
 
-        for (auto &n : neurons) {
-            n.weights = std::vector<double>(count, 0);
-
-            for (unsigned int i = 0; i < n.weights.size(); i++) {
-                n.weights[i] = rand() / static_cast<double>(RAND_MAX) * 2 - 1;
-            }
-            
-            n.bias = rand() / static_cast<double>(RAND_MAX) * 2 - 1;
-        }
+        weightMatrix = Math::Matrix::RandomMatrix(neuronCount, connectionCount);
+        biasVector = Math::Matrix::RandomMatrix(neuronCount, 1);
     }
 
-    Math::Matrix Layer::WeightMatrix()
+    Math::Matrix Layer::Output()
     {
-        std::vector<std::vector<double>> weights = {};
-
-        for (auto neuron : neurons) {
-            weights.push_back(neuron.weights);
-        }
-
-        return Math::Matrix(weights);
+        if (activationFn)
+            return valueMatrix.Apply(activationFn->fn());
+        
+        return valueMatrix;
     }
 
-    std::vector<double> Layer::BiasVector()
+    Math::Matrix Layer::CalculateValues(Math::Matrix input)
     {
-        std::vector<double> bias = {};
-
-        for (auto neuron : neurons) {
-            bias.push_back(neuron.bias);
-        }
-
-        return bias;
-    }
-
-    std::vector<double> Layer::OutputVector()
-    {
-        std::vector<double> output = {};
-
-        for (auto neuron : neurons) {
-            if (activationFn != nullptr)
-                output.push_back(activationFn->fn(neuron.value));
-            else
-                output.push_back(neuron.value);
-        }
-
-        return output;
-    }
-
-    std::vector<double> Layer::CalculateValues(std::vector<double> input)
-    {
-        if (input.size() != connectionCount)
+        if (input.rows != connectionCount)
             throw std::invalid_argument("input dimensions do not match specified dimensions");
 
-        std::vector<double> values = WeightMatrix() * input + BiasVector();
+        valueMatrix = weightMatrix * input + biasVector;
 
-        for (unsigned int i = 0; i < values.size(); i++)
-        {
-            neurons[i].value = values[i];
-        }
-
-        return OutputVector();
+        return Output();
     }
 
-    void Layer::AdjustNeurons(std::vector<std::vector<double>> weightShiftVector, std::vector<double> biasShiftVector, double mult)
+    void Layer::AdjustNeurons(Math::Matrix weightShiftMatrix, Math::Vector biasShiftVector, double mult)
     {
-        if (neurons.size() != weightShiftVector.size() || neurons.size() != biasShiftVector.size())
+        if (weightMatrix.rows != weightShiftMatrix.rows || weightMatrix.cols != weightShiftMatrix.cols || biasVector.size() != biasShiftVector.size())
             throw std::invalid_argument("number of adjustments do not match number of neurons");
 
-        for (unsigned int i = 0; i < neurons.size(); i++) {
-            neurons[i].Adjust(weightShiftVector[i], biasShiftVector[i], mult);
-        }
+        weightMatrix += weightShiftMatrix * mult;
+        biasVector += biasShiftVector * mult;
     }
 }

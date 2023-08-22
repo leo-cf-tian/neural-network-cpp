@@ -4,14 +4,20 @@
 #include "ActivationFn.hpp"
 #include "Matrix.hpp"
 #include "Neuron.hpp"
+#include "Vector.hpp"
 
 namespace NeuralNetwork
 {
     struct Layer
     {
     public:
-        double connectionCount;
-        std::vector<Neuron> neurons;
+        std::size_t neuronCount;
+        std::size_t connectionCount;
+
+        Math::Matrix weightMatrix;
+        Math::Vector biasVector;
+        Math::Matrix valueMatrix;
+
         ActivationFn::ActivationFn* activationFn;
 
         Layer();
@@ -19,11 +25,10 @@ namespace NeuralNetwork
         Layer(std::size_t count, ActivationFn::ActivationFn* fn);
 
         void InitializeConnections(std::size_t count);
-    
-        Math::Matrix WeightMatrix();
-        std::vector<double> BiasVector();
-        std::vector<double> OutputVector();
-        std::vector<double> CalculateValues(std::vector<double> input);
-        void AdjustNeurons(std::vector<std::vector<double>> weightShiftVector, std::vector<double> biasShiftVector, double mult = 1);
+        Neuron Neurons(unsigned int i);
+
+        Math::Matrix Output();
+        Math::Matrix CalculateValues(Math::Matrix input);
+        void AdjustNeurons(Math::Matrix weightShiftMatrix, Math::Vector biasShiftVector, double mult = 1);
     };
 }

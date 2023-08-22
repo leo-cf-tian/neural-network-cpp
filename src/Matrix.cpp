@@ -5,6 +5,7 @@
 #include <chrono>
 
 #include "Matrix.hpp"
+#include "Vector.hpp"
 
 namespace Math
 {
@@ -16,6 +17,16 @@ namespace Math
 
         values = std::vector<double>(rows * cols, 0);
     };
+
+    Matrix::Matrix(std::size_t p_rows, std::size_t p_cols, double value)
+        : rows(p_rows), cols(p_cols)
+    {
+        if (rows < 1 || cols < 1) 
+            throw std::invalid_argument("matrix dimensions must be positive");
+        
+        values = std::vector<double>(rows * cols, value);
+    };
+
 
     Matrix::Matrix(std::size_t p_rows, std::size_t p_cols, matrix p_values)
         : rows(p_rows), cols(p_cols)
@@ -76,13 +87,7 @@ namespace Math
         values = p_values;
     };
 
-    
-    Matrix Matrix::ColumnMatrix(std::vector<double> p_values)
-    {
-        return Matrix(p_values.size(), 1, p_values);
-    }
-
-    Matrix Matrix::RandomMatrix(std::size_t rows, std::size_t cols)
+    Matrix Matrix::RandomMatrix(std::size_t rows, std::size_t cols, double min, double max)
     {
         srand(std::chrono::system_clock::now().time_since_epoch().count());
 
@@ -90,7 +95,7 @@ namespace Math
 
         for (unsigned int i = 0; i < rows; i++) {
             for (unsigned int j = 0; j < cols; j++) {
-                values[i][j] = rand() / static_cast<double>(RAND_MAX) * 200 - 100;
+                values[i][j] = rand() / static_cast<double>(RAND_MAX) * (max - min) + min;
             }
         }
 
@@ -99,36 +104,33 @@ namespace Math
         return result;
     }
 
-    Matrix operator+(Matrix const &m1, Matrix const &m2)
+    Matrix Matrix::operator+(Matrix const &matrix) const
     {
-        if (m1.rows != m2.rows || m1.cols != m2.cols)
+        if (rows != matrix.rows || cols != matrix.cols)
             throw std::invalid_argument("matrices are not of the same size");
-
-        Matrix result(m1.rows, m2.cols);
-
-        for (unsigned int i = 0; i < m1.rows * m1.cols; i++) {
-                result.values[i] = m1.values[i] + m2.values[i];
-        }
-
-        return result;
-    };
-    
-    Matrix Matrix::operator+(std::vector<double> const &vector) const
-    {
-        if (rows != 1 && cols != 1)
-            throw std::invalid_argument("vectors can only be added to column or row matrices");
-
-        if (vector.size() != rows * cols) 
-            throw std::invalid_argument("length of values array does not match matrix size");
 
         Matrix result(rows, cols);
 
         for (unsigned int i = 0; i < rows * cols; i++) {
-                result.values[i] = values[i] + vector[i];
+                result.values[i] = values[i] + matrix.values[i];
         }
 
         return result;
-    }
+    };
+
+    Matrix Matrix::operator+(Vector const &vector) const
+    {
+        if (rows != vector.size())
+            throw std::invalid_argument("vector cannot be expanded to matrix of the same size");
+
+        Matrix result(rows, cols);
+
+        for (unsigned int i = 0; i < rows * cols; i++) {
+                result.values[i] = values[i] + vector.values[i % vector.rows];
+        }
+
+        return result;
+    };
 
     Matrix &Matrix::operator+=(Matrix const &matrix)
     {
@@ -156,6 +158,20 @@ namespace Math
         return result;
     };
 
+    Matrix Matrix::operator-(Vector const &vector) const
+    {
+        if (rows != vector.size())
+            throw std::invalid_argument("vector cannot be expanded to matrix of the same size");
+
+        Matrix result(rows, cols);
+
+        for (unsigned int i = 0; i < rows * cols; i++) {
+                result.values[i] = values[i] - vector.values[i % vector.rows];
+        }
+
+        return result;
+    };
+
     Matrix &Matrix::operator-=(Matrix const &matrix)
     {
         if (rows != matrix.rows || cols != matrix.cols)
@@ -170,7 +186,7 @@ namespace Math
 
     Matrix Matrix::operator-()
     {
-        return Matrix(rows, cols, values) * -1.0f;
+        return Matrix(rows, cols, values) * -1.0;
     };
 
     Matrix operator*(const double &num, Matrix const &matrix)
@@ -234,22 +250,6 @@ namespace Math
         return *this;
     };
 
-    Matrix Matrix::operator*(std::vector<double> const &vector) const
-    {
-        if (cols != vector.size())
-            throw std::invalid_argument("matrix column count and vector length does not match");
-
-       Matrix result(rows, 1);
-
-        for (unsigned int i = 0; i < rows; i++) {
-            for (unsigned int j = 0; j < cols; j++) {
-                result.values[i] += values[i * cols + j] * vector[j];
-            }
-        }
-
-        return result;
-    };
-
     Matrix Matrix::operator*(Matrix const &matrix) const
     {
         if (cols != matrix.rows)
@@ -268,6 +268,20 @@ namespace Math
         return result;
     };
 
+    Matrix Matrix::operator&(Matrix const &matrix) const
+    {
+        if (rows != matrix.rows || cols != matrix.cols)
+            throw std::invalid_argument("matrices are not of the same size");
+
+        Matrix result(rows, cols);
+
+        for (unsigned int i = 0; i < rows * cols; i++) {
+                result.values[i] = values[i] * matrix.values[i];
+        }
+
+        return result;
+    };
+
     std::vector<double> Matrix::operator[](std::size_t i) const
     {
         if (i >= rows || i < 0)
@@ -276,6 +290,16 @@ namespace Math
         return std::vector<double>(values.begin() + i * cols, values.begin() + (i + 1) * cols);
     };
 
+    double &Matrix::at(std::size_t row, std::size_t col)
+    {
+        return values[row * cols + col];
+    }
+
+    double Matrix::at(std::size_t row, std::size_t col) const
+    {
+        return values[row * cols + col];
+    }
+
     Matrix::operator std::vector<double>() const
     {
         if (rows != 1 && cols != 1)
@@ -283,4 +307,54 @@ namespace Math
 
         return values;
     }
+
+    Matrix::operator double() const
+    {
+        if (rows != 1 || cols != 1)
+            throw std::invalid_argument("only matrices with a single value can be cast to doubles");
+
+        return values[0];
+    }
+
+    Matrix Matrix::Transpose()
+    {
+        Matrix result(cols, rows);
+
+        for (unsigned int i = 0; i < rows; i++) {
+            for (unsigned int j = 0; j < cols; j++) {
+                result.values[j * rows + i] = values[i * cols + j];
+            }
+        }
+
+        return result;
+    };
+
+    Matrix Matrix::Apply(std::function<double(double)> fn)
+    {
+        Matrix result(rows, cols);
+
+        for (unsigned int i = 0; i < rows; i++) {
+            for (unsigned int j = 0; j < cols; j++) {
+                result.values[i * cols + j] = fn(values[i * cols + j]);
+            }
+        }
+
+        return result;
+    }
+    
+    Matrix Matrix::ApplyForEach(std::function<double(double, double)> fn, Matrix argMatrix)
+    {
+        if (rows != argMatrix.rows || cols != argMatrix.cols)
+            throw std::invalid_argument("argument matrix size not match matrix size");
+        
+        Matrix result(rows, cols);
+
+        for (unsigned int i = 0; i < rows; i++) {
+            for (unsigned int j = 0; j < cols; j++) {
+                result.values[i * cols + j] = fn(values[i * cols + j], argMatrix.values[i * cols + j]);
+            }
+        }
+
+        return result;
+    };
 }

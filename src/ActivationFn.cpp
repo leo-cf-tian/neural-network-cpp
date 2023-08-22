@@ -4,27 +4,15 @@
 
 namespace ActivationFn
 {
-    std::vector<double> ActivationFn::fn(std::vector<double> vecX)
+    std::function<double(double)> ActivationFn::fn()
     {
-        std::vector<double> result = std::vector<double>(vecX.size(), 0);
+        return [this](double x) { return fn(x); };
+    };
 
-        for (unsigned int i = 0; i < vecX.size(); i++) {
-            result[i] = fn(vecX[i]);
-        }
-
-        return result;
-    }
-
-    std::vector<double> ActivationFn::dx(std::vector<double> vecX)
+    std::function<double(double)> ActivationFn::dx()
     {
-        std::vector<double> result = std::vector<double>(vecX.size(), 0);
-
-        for (unsigned int i = 0; i < vecX.size(); i++) {
-            result[i] = dx(vecX[i]);
-        }
-
-        return result;
-    }
+        return [this](double x) { return dx(x); };
+    };
 
     double ReLU::fn(double x)
     {

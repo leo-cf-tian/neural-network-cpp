@@ -34,7 +34,7 @@ namespace NeuralNetwork
             return;
         }
         
-        layer.InitializeConnections(layers.back().neurons.size());
+        layer.InitializeConnections(layers.back().neuronCount);
         layers.push_back(layer);
     }
 
@@ -43,108 +43,71 @@ namespace NeuralNetwork
         costFn = p_costFn;
     }
 
-    void MultilayerPerceptron::LoadDataInstance(Data input)
+    void MultilayerPerceptron::LoadDataInstance(Data &input)
     {
         if (layers.size() < 1)
             throw std::invalid_argument("neural network layers are not defined");
 
-        if (input.parameters.size() != layers[0].neurons.size()) 
+        if (input.parameterSize != layers[0].neuronCount) 
             throw std::invalid_argument("input dimensions do not match specified dimensions");
 
-        for (unsigned int i = 0; i < input.parameters.size(); i++) {
-            layers[0].neurons[i].value = input.parameters[i];
-        }
+        layers[0].valueMatrix = input.parameters;
     }
 
     void MultilayerPerceptron::RunModel()
     {
-        std::vector<double> output = layers[0].OutputVector();
+        Math::Matrix output = layers[0].Output();
 
         for (unsigned int i = 1; i < layers.size(); i++) {
             output = layers[i].CalculateValues(output);
         }
     }
 
-    LinearParams MultilayerPerceptron::GradientDescent(std::vector<Data> batch, double learningRate)
+    Math::Matrix MultilayerPerceptron::GradientDescent(Data &batch, double learningRate)
     {
         Layer &layer = layers.back();
+        
+        LoadDataInstance(batch);
+        RunModel();
 
-        std::vector<Math::Matrix> weightDerivatives = std::vector<Math::Matrix>(layer.neurons.size(), Math::Matrix(layer.connectionCount, 1));
-        std::vector<double> biasDerivatives = std::vector<double>(layer.neurons.size(), 0);
-        std::vector<double> prevValueDerivatives = std::vector<double>(layer.connectionCount, 0);
+        // dZ[n]
+        // batch count divided here to prevent overflow
+        Math::Matrix adjustmentMatrix = layer.valueMatrix.Apply(layer.activationFn->dx())
+                                            & layer.Output().ApplyForEach(costFn->dx(), batch.label)
+                                            / double(batch.dataInstanceCount);
+        
+        // dW[n]
+        Math::Matrix weightDerivatives = adjustmentMatrix * layers[layers.size() - 2].Output().Transpose();
+        
+        // db[n]
+        // vector multiplication sums each row
+        Math::Vector biasDerivatives = adjustmentMatrix * Math::Vector(adjustmentMatrix.cols, 1, true);
+        
+        // dA[n-1]
+        Math::Matrix prevValueDerivatives = layer.weightMatrix.Transpose() * adjustmentMatrix;
+        
+        layer.AdjustNeurons(-weightDerivatives, -biasDerivatives, learningRate);
 
-        for (auto data : batch) {
-            LoadDataInstance(data);
-            RunModel();
-
-            for (unsigned int i = 0; i < layer.neurons.size(); i++) {
-                NeuralNetwork::Neuron neuron = layer.neurons[i];
-                double adjustment = layer.activationFn->dx(neuron.value)
-                                        * costFn->dx(data.label, layer.activationFn->fn(neuron.value))
-                                        / batch.size();
-
-                weightDerivatives[i] += adjustment * Math::Matrix::ColumnMatrix(layers[layers.size() - 2].OutputVector());
-                biasDerivatives[i] += adjustment;
-                for (unsigned int j = 0; j < layer.connectionCount; j++)
-                {
-                    prevValueDerivatives[j] += adjustment * layer.neurons[i].weights[j];
-                }
-            }
-        }
-
-        std::vector<std::vector<double>> weightAdjustments = {};
-        std::vector<double> biasAdjustments = {};
-
-        for (unsigned int i = 0; i < layers.back().neurons.size(); i++) {
-            weightAdjustments.push_back(-weightDerivatives[i]);
-            biasAdjustments.push_back(-biasDerivatives[i]);
-        }
-         
-        layer.AdjustNeurons(weightAdjustments, biasAdjustments, learningRate);
-
-        return LinearParams(weightDerivatives, biasDerivatives, prevValueDerivatives);
+        return prevValueDerivatives;
     }
 
-    LinearParams MultilayerPerceptron::Backpropagate(LinearParams changes, std::size_t layerIndex)
+    Math::Matrix MultilayerPerceptron::Backpropagate(Math::Matrix &changes, std::size_t layerIndex, double learningRate)
     {
-        std::vector<Math::Matrix> nextWeightAdjustments = std::get<0>(changes);
-        std::vector<double> nextBiasAdjustments = std::get<1>(changes);
-        std::vector<double> valueAdjustments = std::get<2>(changes);
-
         Layer &layer = layers[layerIndex];
 
-        std::vector<Math::Matrix> weightDerivatives = std::vector<Math::Matrix>(layer.neurons.size(), Math::Matrix(layer.connectionCount, 1));
-        std::vector<double> biasDerivatives = std::vector<double>(layer.neurons.size(), 0);
-        std::vector<double> prevValueDerivatives = std::vector<double>(layer.connectionCount, 0);
+        Math::Matrix adjustmentMatrix = layer.valueMatrix.Apply(layer.activationFn->dx())
+                                            & changes;
 
-        for (unsigned int i = 0; i < layer.neurons.size(); i++) {
-            NeuralNetwork::Neuron neuron = layer.neurons[i];
-            double adjustment = layer.activationFn->dx(neuron.value)
-                                    * valueAdjustments[i];
-
-            weightDerivatives[i] += adjustment * Math::Matrix::ColumnMatrix(layers[layerIndex - 1].OutputVector());
-            biasDerivatives[i] += adjustment;
-
-            for (unsigned int j = 0; j < layer.connectionCount; j++)
-            {
-                prevValueDerivatives[j] += adjustment * layer.neurons[i].weights[j];
-            }
-        }
+        Math::Matrix weightDerivatives = adjustmentMatrix * layers[layerIndex - 1].Output().Transpose();
+        Math::Vector biasDerivatives = adjustmentMatrix * Math::Vector(adjustmentMatrix.cols, 1, true);
+        Math::Matrix prevValueDerivatives = layer.weightMatrix.Transpose() * adjustmentMatrix;
         
-        std::vector<std::vector<double>> weightAdjustments = {};
-        std::vector<double> biasAdjustments = {};
+        layer.AdjustNeurons(-weightDerivatives, -biasDerivatives, learningRate);
 
-        for (unsigned int i = 0; i < layer.neurons.size(); i++) {
-            weightAdjustments.push_back(-weightDerivatives[i]);
-            biasAdjustments.push_back(-biasDerivatives[i]);
-        }
-        
-        layer.AdjustNeurons(weightAdjustments, biasAdjustments);
-
-        return LinearParams(weightDerivatives, biasDerivatives, prevValueDerivatives);
+        return prevValueDerivatives;
     }
     
-    TrainTestPartition MultilayerPerceptron::PartitionData(std::vector<Data> data, double trainingDataRatio, int batchSize)
+    TrainTestPartition MultilayerPerceptron::PartitionData(std::vector<Data> &data, double trainingDataRatio, int batchSize)
     {
         if (trainingDataRatio < 0 || trainingDataRatio > 1)
             throw std::invalid_argument("size of partition must be between 0 and 1");
@@ -174,10 +137,16 @@ namespace NeuralNetwork
             }
         }
 
-        return TrainTestPartition(trainingSets, testingSet);
+        std::vector<Data> trainingBatches = {};
+
+        for (auto batch : trainingSets) {
+            trainingBatches.push_back(Data(batch));
+        }
+
+        return TrainTestPartition(trainingBatches, testingSet);
     }
     
-    std::tuple<double, double> MultilayerPerceptron::TestData(std::vector<Data> testingSet)
+    std::tuple<double, double> MultilayerPerceptron::TestData(std::vector<Data> &testingSet)
     {
         int correct = 0;
         int incorrect = 0;
@@ -185,12 +154,12 @@ namespace NeuralNetwork
         for (auto data : testingSet) {
             LoadDataInstance(data);
             RunModel();
-            if ((layers.back().neurons[0].value > 0 && data.label == 1) || (layers.back().neurons[0].value < 0 && data.label == -1))
+            if ((layers.back().valueMatrix[0][0] > 0 && data.label[0] == 1) || (layers.back().valueMatrix[0][0] < 0 && data.label[0] == -1))
                 correct++;
             else
                 incorrect++;
 
-            cost += costFn->fn(data.label, layers.back().activationFn->fn(layers.back().neurons[0].value)) / testingSet.size();
+            cost += costFn->fn(data.label[0], layers.back().activationFn->fn(layers.back().valueMatrix[0][0])) / testingSet.size();
         }
 
         double accuracy = (double)correct / (double)(correct + incorrect);
@@ -198,21 +167,21 @@ namespace NeuralNetwork
         return std::tuple<double, double>(accuracy, cost);
     }
 
-    void MultilayerPerceptron::Train(std::vector<Data> data, int epochs, double learningRate, int batchSize)
+    void MultilayerPerceptron::Train(std::vector<Data> &data, int epochs, double learningRate, int batchSize)
     {
         for (int epoch = 0; epoch < epochs; epoch++) {
             std::cout << "Epoch " << epoch << std::endl;
 
             TrainTestPartition partition = PartitionData(data);
 
-            std::vector<std::vector<Data>> trainingSets = partition.first;
+            std::vector<Data> trainingSets = partition.first;
             std::vector<Data> testingSet = partition.second;
 
             for (auto trainingSet : trainingSets) {
-                LinearParams changes = GradientDescent(trainingSet, learningRate);
+                Math::Matrix changes = GradientDescent(trainingSet, learningRate);
 
                 for (unsigned int i = layers.size() - 2; i > 0; i--) {
-                    changes = Backpropagate(changes, i);
+                    changes = Backpropagate(changes, i, learningRate);
                 }
             }
 

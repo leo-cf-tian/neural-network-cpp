@@ -1,15 +1,13 @@
 #pragma once
 #include <vector>
 
+#include "Vector.hpp"
+
 namespace NeuralNetwork {
     struct Neuron
     {
-        std::vector<double> weights;
+        Math::Vector weights;
         double bias;
-        double value;
-
-        Neuron(std::size_t connectionCount);
-        
-        void Adjust(std::vector<double> weightShift, double biasShift, double mult);
+        Math::Vector values;
     };
 }
