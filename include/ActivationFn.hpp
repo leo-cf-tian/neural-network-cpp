@@ -8,10 +8,13 @@ namespace ActivationFn
     class ActivationFn
     {
     public:
+        virtual ~ActivationFn();
+
         virtual double fn(double x);
         std::function<double(double)> fn();
         virtual double dx(double x);
         std::function<double(double)> dx();
+        virtual ActivationFn* clone();
     };
 
     class ReLU : public ActivationFn
@@ -19,6 +22,7 @@ namespace ActivationFn
     public:
         double fn(double x) override;
         double dx(double x) override;
+        ActivationFn* clone() override;
     };
 
     class LeakyReLU : public ActivationFn
@@ -26,6 +30,7 @@ namespace ActivationFn
     public:
         double fn(double x) override;
         double dx(double x) override;
+        ActivationFn* clone() override;
     };
 
     class Tanh : public ActivationFn
@@ -33,6 +38,7 @@ namespace ActivationFn
     public:
         double fn(double x) override;
         double dx(double x) override;
+        ActivationFn* clone() override;
     };
 
     class LogisticSigmoid : public ActivationFn
@@ -40,6 +46,7 @@ namespace ActivationFn
     public:
         double fn(double x) override;
         double dx(double x) override;
+        ActivationFn* clone() override;
     };
 
     class Linear : public ActivationFn
@@ -47,5 +54,6 @@ namespace ActivationFn
     public:
         double fn(double x) override;
         double dx(double x) override;
+        ActivationFn* clone() override;
     };
 }

@@ -1,7 +1,8 @@
 #pragma once
 #include <cmath>
 #include <vector>
-#include <bits/stdc++.h>
+
+#include "ThreadPool.hpp"
 
 namespace Math
 {
@@ -9,11 +10,22 @@ namespace Math
 
     struct Matrix
     {
+    protected:
+        std::vector<double> values;
+        static ThreadPool threadPool;
+
+        /**
+         * Uses threadpool to optimize matrix calculations
+         * @param fn fn(start, end): where start and end are row numbers of the matrix
+         * @param total number of row calculations required
+         */
+        static void UseThreadPool(std::function<void(unsigned int start, unsigned int end)> fn, int total);
+
+    public:
         using matrix = std::vector<std::vector<double>>;
         std::size_t rows;
         std::size_t cols;
 
-    public:
         Matrix(std::size_t p_rows, std::size_t p_cols);
         Matrix(std::size_t p_rows, std::size_t p_cols, double value);
         Matrix(std::size_t p_rows, std::size_t p_cols, matrix values);
@@ -24,13 +36,13 @@ namespace Math
 
         Matrix operator+(Matrix const &matrix) const;
         /**
-         * @brief Adds column vector to each column of matrix
+         * Adds column vector to each column of matrix
          */
         Matrix operator+(Math::Vector const &vector) const;
         Matrix &operator+=(Matrix const &matrix);
         Matrix operator-(Matrix const &matrix) const;
         /**
-         * @brief Subtracts vector from each column of matrix
+         * Subtracts column vector from each column of matrix
          */
         Matrix operator-(Math::Vector const &vector) const;
         Matrix &operator-=(Matrix const &matrix);
@@ -43,12 +55,12 @@ namespace Math
         Matrix &operator/=(const double &num);
 
         /**
-         * @brief Product of two matrices
+         * Product of two matrices
          */
         Matrix operator*(Matrix const &matrix) const;
         
         /**
-         * @brief Hadamard / element-wise product of two matrices
+         * Hadamard / element-wise product of two matrices
          */
         Matrix operator&(Matrix const &matrix) const;
 
@@ -62,23 +74,24 @@ namespace Math
         Matrix Transpose();
 
         /**
-         * @brief Applies a function to the matrix
+         * Applies a function to the matrix
          * @param fn fn(x): where x is the matrix member
          */
         Matrix Apply(std::function<double(double)> fn);
 
         /**
-         * @brief Applies a function to each member of the matrix, with a different parameter for each member
+         * Applies a function to each member of the matrix, with a different parameter for each member
          * @param fn fn(x, y): where x is the matrix member, and y is the argument matrix member
          * @param argMatrix Matrix of arguments corresponding to each member
          */
         Matrix ApplyForEach(std::function<double(double, double)> fn, Matrix argMatrix);
 
-    protected:
-        std::vector<double> values;
+        /**
+         * Prints matrix to console
+        */
+        void print();
     };
 
-    Matrix operator+(Matrix const &m1, Matrix const &m2);
     Matrix operator*(const double &num, Matrix const &matrix);
 }
 

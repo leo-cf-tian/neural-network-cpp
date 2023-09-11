@@ -10,24 +10,47 @@ using namespace std::chrono;
 using namespace std;
 
 int main(void) {
+    srand(time(NULL));
 
-    MultilayerPerceptron model(new CostFn::L2());
-    model.AddLayer(Layer(2));
-    model.AddLayer(Layer(10, new ActivationFn::LeakyReLU()));
-    model.AddLayer(Layer(1, new ActivationFn::LogisticSigmoid()));
+    auto start = high_resolution_clock::now();
 
-    vector<Data> dataset = {};
+    MultilayerPerceptron model(new CostFn::SparseCategoricalCrossEntropy());
+    model.AddLayer(Layer(28 * 28));
+    model.AddLayer(Layer(128, new ActivationFn::ReLU()));
+    model.AddLayer(Layer(64, new ActivationFn::ReLU()));
+    model.AddLayer(Layer(32, new ActivationFn::ReLU()));
+    model.AddLayer(Layer(10, new ActivationFn::LogisticSigmoid()));
 
-    for (int i = 0; i < 1000; i++) {
-        srand(std::chrono::system_clock::now().time_since_epoch().count());
+    // vector<Data> dataset = {};
 
-        float a = rand() / static_cast<float>(RAND_MAX) * 40 - 20;
-        float b = rand() / static_cast<float>(RAND_MAX) * 40 - 20;
+    // for (int i = 0; i < 1000; i++) {
+    //     srand(std::chrono::system_clock::now().time_since_epoch().count());
+
+    //     double a = rand() / static_cast<double>(RAND_MAX) * 20 - 10;
+    //     double b = rand() / static_cast<double>(RAND_MAX) * 20 - 10;
         
-        float value = a * a + b * b < 100 ? 1 : -1;
+    //     double value = a * a * a + 4 * b * b + 10 > 0;
 
-        dataset.push_back(Data({a, b}, value));
-    }
+    //     dataset.push_back(Data({a, b}, value));
+    // }
 
-    model.Train(dataset, 10000, 0.001);
+    // Data::TrainTestPartition data = Data::PartitionData(dataset);
+
+    Data::TrainTestPartition data = Data::LoadMNIST();
+
+    // cout << data.first[1].label << endl;
+    // for (int i = 0; i < 28; i++) {
+    //     for (int j = 0; j < 28; j++) {
+    //         cout << (data.first[1].parameters[i * 28 + j][0] == 0 ? " " : "0");
+    //     }
+    //     cout << endl;
+    // }
+
+    model.Train(data.first, data.second, 5000, 0.1, 128);
+    
+    auto stop = high_resolution_clock::now();
+
+    auto duration = duration_cast<microseconds>(stop - start);
+ 
+    cout << duration.count() << endl;
 }

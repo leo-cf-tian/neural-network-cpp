@@ -26,6 +26,11 @@ namespace NeuralNetwork
         layers = std::vector<Layer>(0);
     };
 
+    MultilayerPerceptron::~MultilayerPerceptron()
+    {
+        delete costFn;
+    }
+
     void MultilayerPerceptron::AddLayer(Layer layer)
     {
         if (layers.size() == 0) {
@@ -66,15 +71,17 @@ namespace NeuralNetwork
     Math::Matrix MultilayerPerceptron::GradientDescent(Data &batch, double learningRate)
     {
         Layer &layer = layers.back();
-        
+
         LoadDataInstance(batch);
         RunModel();
+        
+        Data transformedBatch = costFn->transformLabels(batch, layers.back());
 
         // dZ[n]
         // batch count divided here to prevent overflow
         Math::Matrix adjustmentMatrix = layer.valueMatrix.Apply(layer.activationFn->dx())
-                                            & layer.Output().ApplyForEach(costFn->dx(), batch.label)
-                                            / double(batch.dataInstanceCount);
+                                            & layer.Output().ApplyForEach(costFn->dx(), transformedBatch.label)
+                                            / double(transformedBatch.dataInstanceCount);
         
         // dW[n]
         Math::Matrix weightDerivatives = adjustmentMatrix * layers[layers.size() - 2].Output().Transpose();
@@ -85,7 +92,7 @@ namespace NeuralNetwork
         
         // dA[n-1]
         Math::Matrix prevValueDerivatives = layer.weightMatrix.Transpose() * adjustmentMatrix;
-        
+
         layer.AdjustNeurons(-weightDerivatives, -biasDerivatives, learningRate);
 
         return prevValueDerivatives;
@@ -107,34 +114,20 @@ namespace NeuralNetwork
         return prevValueDerivatives;
     }
     
-    TrainTestPartition MultilayerPerceptron::PartitionData(std::vector<Data> &data, double trainingDataRatio, int batchSize)
+    std::vector<Data> MultilayerPerceptron::BatchData(std::vector<Data> &data, int batchSize)
     {
-        if (trainingDataRatio < 0 || trainingDataRatio > 1)
-            throw std::invalid_argument("size of partition must be between 0 and 1");
-
-        if ((int)(data.size() * trainingDataRatio) < 1 || (int)(data.size() * (1 - trainingDataRatio)) < 1)
-            throw std::invalid_argument("partition must not return lists of size 0");
-
-        unsigned int bound = data.size() * trainingDataRatio;
-
-        if (batchSize == 0)
-            batchSize = bound;
-            
-        unsigned int batches = ceil((data.size() * trainingDataRatio) / (double) batchSize);
-
         std::default_random_engine rng(std::chrono::system_clock::now().time_since_epoch().count());
         std::shuffle(std::begin(data), std::end(data), rng);
 
+        if (batchSize == 0)
+            batchSize = data.size();
+            
+        unsigned int batches = ceil(data.size() / (double) batchSize);
+            
         std::vector<std::vector<Data>> trainingSets = std::vector<std::vector<Data>>(batches, std::vector<Data>());
-        std::vector<Data> testingSet = {};
 
         for (unsigned int i = 0; i < data.size(); i++) {
-            if (i < bound) {
-                trainingSets[i / batchSize].push_back(data[i]);
-            }
-            else {
-                testingSet.push_back(data[i]);
-            }
+            trainingSets[i / batchSize].push_back(data[i]);
         }
 
         std::vector<Data> trainingBatches = {};
@@ -143,72 +136,61 @@ namespace NeuralNetwork
             trainingBatches.push_back(Data(batch));
         }
 
-        return TrainTestPartition(trainingBatches, testingSet);
+        return trainingBatches;
     }
     
-    std::tuple<double, double> MultilayerPerceptron::TestData(std::vector<Data> &testingSet)
+    std::tuple<double, double> MultilayerPerceptron::TestData(Data &data)
     {
-        int correct = 0;
-        int incorrect = 0;
-        double cost = 0;
-        for (auto data : testingSet) {
-            LoadDataInstance(data);
-            RunModel();
-            if ((layers.back().valueMatrix[0][0] > 0 && data.label[0] == 1) || (layers.back().valueMatrix[0][0] < 0 && data.label[0] == -1))
-                correct++;
-            else
-                incorrect++;
+        LoadDataInstance(data);
+        RunModel();
 
-            cost += costFn->fn(data.label[0], layers.back().activationFn->fn(layers.back().valueMatrix[0][0])) / testingSet.size();
-        }
+        Data transformedData = costFn->transformLabels(data, layers.back());
 
-        double accuracy = (double)correct / (double)(correct + incorrect);
+        double accuracy = costFn->evaluate(layers.back().Output(), data.label);
+        double cost = (double) (Math::Vector(layers.back().neuronCount, 1, false) * layers.back().Output().ApplyForEach(costFn->fn(), transformedData.label) * Math::Vector(transformedData.dataInstanceCount, 1, true)) / transformedData.dataInstanceCount;
 
         return std::tuple<double, double>(accuracy, cost);
     }
 
-    void MultilayerPerceptron::Train(std::vector<Data> &data, int epochs, double learningRate, int batchSize)
+    void MultilayerPerceptron::Train(std::vector<Data> &trainingSet, std::vector<Data> &testingSet, int epochs, double learningRate, int batchSize)
     {
+        Data trainingSetCache = Data(trainingSet);
+        Data testingSetCache = Data(testingSet);
+
         for (int epoch = 0; epoch < epochs; epoch++) {
             std::cout << "Epoch " << epoch << std::endl;
 
-            TrainTestPartition partition = PartitionData(data);
+            std::vector<Data> batches = BatchData(trainingSet, batchSize);
 
-            std::vector<Data> trainingSets = partition.first;
-            std::vector<Data> testingSet = partition.second;
-
-            for (auto trainingSet : trainingSets) {
-                Math::Matrix changes = GradientDescent(trainingSet, learningRate);
+            for (auto batch : batches) {
+                Math::Matrix changes = GradientDescent(batch, learningRate);
 
                 for (unsigned int i = layers.size() - 2; i > 0; i--) {
                     changes = Backpropagate(changes, i, learningRate);
                 }
             }
 
-            std::tuple<double, double> results = TestData(testingSet);
+            std::tuple<double, double> results = TestData(trainingSetCache);
             double accuracy = std::get<0>(results);
             double cost = std::get<1>(results);
-
-            std::cout << "Accuracy: " << accuracy << std::endl;
+            std::cout << "Accuracy: " << accuracy << "\t\t";
             std::cout << "Cost: " << cost << std::endl;
+
+            if (testingSet.size()) {
+                std::tuple<double, double> valResults = TestData(testingSetCache);
+                double valAccuracy = std::get<0>(valResults);
+                double valCost = std::get<1>(valResults);
+                std::cout << "Validation Accuracy: " << valAccuracy << "\t";
+                std::cout << "Validation Cost: " << valCost << std::endl;
+            }
+
             std::cout << std::endl;
         }
     }
 
-    // class MultilayerPerceptron
-    // {
-    //     Layer inputLayer;
-    //     std::vector<Layer> hiddenLayer;
-    //     Layer outputLayer;
-
-    //     MultilayerPerceptron();
-
-    //     void AddLayer(Layer layer);
-
-    //     void LoadDataInstance(Data input);
-    //     void RunModel();
-    //     std::vector<double> GradientDescent(std::vector<Data> batch);
-    //     std::vector<double> Backpropagate();
-    //     void Train(std::vector<Data> data, int epochs);
-    // };
+    void MultilayerPerceptron::Train(std::vector<Data> &trainingSet, int epochs, double learningRate, int batchSize)
+    {
+        std::vector<Data> testingSet = {};
+        Train(trainingSet, testingSet, epochs, learningRate, batchSize);
+    }
 }

@@ -3,12 +3,55 @@
 #include <vector>
 #include <random>
 #include <chrono>
+#include <algorithm>
 
 #include "Matrix.hpp"
 #include "Vector.hpp"
+#include "ThreadPool.hpp"
 
 namespace Math
 {
+    ThreadPool Matrix::threadPool;
+    
+    void Matrix::UseThreadPool(std::function<void(unsigned int start, unsigned int end)> fn, int total)
+    {
+        std::condition_variable event;
+        static std::mutex eventMutex;
+        std::atomic<int> completedTasksCount(0);
+
+        const int MAX_THREADS = Matrix::threadPool.poolSize();
+        const int THREAD_NUM = std::min({total, MAX_THREADS});
+
+        int block = total / THREAD_NUM;
+
+        int start = 0;
+        int end = block;
+
+        for (int i = 0; i < THREAD_NUM; i++)
+        {
+
+            Matrix::threadPool.QueueTask(
+                [start, end, &fn, &completedTasksCount, &event] {
+                    fn(start, end);
+                    {
+                        std::unique_lock<std::mutex> lock{eventMutex};
+                        completedTasksCount.fetch_add(1);
+                        event.notify_one();
+                    }
+                }
+            );
+            start = end;
+            end = std::min(end + block, total);
+        }
+
+        {
+            std::unique_lock<std::mutex> lock{eventMutex};
+            event.wait(lock, [&completedTasksCount, THREAD_NUM]
+                        { return completedTasksCount == THREAD_NUM; });
+            event.notify_all();
+        }
+    };
+
     Matrix::Matrix(std::size_t p_rows, std::size_t p_cols)
         : rows(p_rows), cols(p_cols)
     {
@@ -254,15 +297,31 @@ namespace Math
     {
         if (cols != matrix.rows)
             throw std::invalid_argument("left matrix column count and right matrix row count does not match");
-
+    
         Matrix result(rows, matrix.cols);
 
-        for (unsigned int i = 0; i < rows; i++) {
-            for (unsigned int j = 0; j < matrix.cols; j++) {
-                for (unsigned int k = 0; k < matrix.rows; k++) {
-                    result.values[i * matrix.cols + j] += values[i * cols + k] * matrix.values[k * matrix.cols + j];
+        // Optimization of whether to multithread based on general benchmarking
+        if (rows > 64 || matrix.cols > 64) {
+            UseThreadPool(
+                [&](unsigned int start, unsigned int end) {
+                    for (unsigned int i = start; i < end; i++) {
+                        for (unsigned int j = 0; j < matrix.cols; j++) {
+                            for (unsigned int k = 0; k < matrix.rows; k++) {
+                                result.values[i * matrix.cols + j] += values[i * cols + k] * matrix.values[k * matrix.cols + j];
+                            }
+                        }
+                    }
                 }
-            }
+            , rows);
+        }
+        else {
+            for (unsigned int i = 0; i < rows; i++) {
+                        for (unsigned int j = 0; j < matrix.cols; j++) {
+                            for (unsigned int k = 0; k < matrix.rows; k++) {
+                                result.values[i * matrix.cols + j] += values[i * cols + k] * matrix.values[k * matrix.cols + j];
+                            }
+                        }
+                    }
         }
 
         return result;
@@ -357,4 +416,14 @@ namespace Math
 
         return result;
     };
+
+    void Matrix::print() {
+        for (unsigned int i = 0; i < rows; i++) {
+            for (unsigned int j = 0; j < cols; j++) {
+                std::cout << values[i * cols + j] << ", ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
+    }
 }

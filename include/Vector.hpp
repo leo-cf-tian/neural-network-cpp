@@ -7,7 +7,7 @@
 namespace Math
 {
     /**
-     * @brief A mathematical vector / column matrix
+     * A mathematical vector / column matrix
      */
     struct Vector : Matrix
     {

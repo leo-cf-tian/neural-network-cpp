@@ -24,6 +24,9 @@ namespace NeuralNetwork
         Layer(std::size_t count);
         Layer(std::size_t count, ActivationFn::ActivationFn* fn);
 
+        ~Layer();
+        Layer(const Layer &p_layer);
+
         void InitializeConnections(std::size_t count);
         Neuron Neurons(unsigned int i);
 

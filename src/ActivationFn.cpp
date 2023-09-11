@@ -4,6 +4,9 @@
 
 namespace ActivationFn
 {
+    ActivationFn::~ActivationFn() {};
+
+
     std::function<double(double)> ActivationFn::fn()
     {
         return [this](double x) { return fn(x); };
@@ -14,6 +17,10 @@ namespace ActivationFn
         return [this](double x) { return dx(x); };
     };
 
+    double ActivationFn::fn(double x) { return x; };
+    double ActivationFn::dx(double x) { return 1; };
+    ActivationFn* ActivationFn::clone() { return new ActivationFn(); };
+
     double ReLU::fn(double x)
     {
         return x > 0 ? x : 0;
@@ -23,6 +30,8 @@ namespace ActivationFn
     {
         return x > 0 ? 1 : 0;
     };
+    
+    ActivationFn* ReLU::clone() { return new ReLU(); };
 
     double LeakyReLU::fn(double x)
     {
@@ -33,6 +42,8 @@ namespace ActivationFn
     {
         return x > 0 ? 1 : 0.1;
     };
+    
+    ActivationFn* LeakyReLU::clone() { return new LeakyReLU(); };
 
     double Tanh::fn(double x)
     {
@@ -43,6 +54,8 @@ namespace ActivationFn
     {
         return 1 / cosh(x) / cosh(x);
     };
+    
+    ActivationFn* Tanh::clone() { return new Tanh(); };
 
     double LogisticSigmoid::fn(double x)
     {
@@ -56,6 +69,8 @@ namespace ActivationFn
 
         return 1 / (exp(x) + 2 + exp(-x));
     }; 
+    
+    ActivationFn* LogisticSigmoid::clone() { return new LogisticSigmoid(); };
 
     double Linear::fn(double x)
     {
@@ -66,4 +81,6 @@ namespace ActivationFn
     {
         return 1;
     };
+    
+    ActivationFn* Linear::clone() { return new Linear(); };
 }
