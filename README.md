@@ -33,11 +33,13 @@ Other notable components include
 ## Performance and Accuracy
 Training on MNIST
 - 99% accuracy and 95% validation accuracy in 40-50 epochs
-- Around 1.5 seconds per epoch, which could use major improvements
+- Around 1.5 seconds per epoch (60000 data instances), which could use major improvements
 
 
 ## Current issues
-- Multithreading does not provide satisfying performance increases for matrices with dimensions under 64 x 64
+- Certain classes need refactoring to improve reliability
+- Multithreading does not provide satisfying performance increases for matrix calculations
+- Current implementation of cost functions class does not support softmax
 
 
 ## Todo
